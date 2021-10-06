@@ -8,69 +8,38 @@ Step 4: Add new released song(s) to respective playlist
 Step 5: Repeat steps above in a crontab via AWS Lambda
 """
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
-from secrets import client_id, client_secret
-
-import argparse
-import logging
-
-# scope = "playlist-modify-public"
-# sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secret=client_secret,redirect_uri="", scope=scope))
-# user_id = sp.me()['id']
-# sp.user_playlist_create(user_id, args.playlist)
+from spotipy.oauth2 import SpotifyOAuth
+import json
 
 class LatestGenrePlaylist:
+    """ Initialize instance variables and SpotifyOAuth class to authenticate requests """  
     def __init__(self):
-        self.genres = []
-        # self.sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client_id, 
-        #                                                                 client_secret=client_secret))
-        # self.user = self.sp.me()['id']
+        self.genres = self.__GetGenreList()
+        self.scope = "playlist-modify-public"
+        self.sp = spotipy.Spotify(auth_manager = SpotifyOAuth(scope = self.scope))
+        self.user_id = self.sp.me()['id']
     
-    def CreateGenreList(self, genres: list):
-        self.genres = genres
+    # def CreateGenreList(self, genres: list):
+    #     self.genres = genres
 
+    """ Create a playlist for each genre in the list """
     def CreateGenrePlayLists(self):
         for genre in self.genres:
-            sp.user_playlist_create(user=user_id,
-                                         name= genre + " playlist",
-                                         public=True)
+            playlistId = self.sp.user_playlist_create(user = self.user_id,
+                                         name = genre + " playlist",
+                                         public = True)
+            print(playlistId)
 
-def main():
-    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client_id,
-                                                           client_secret=client_secret))
+    """ Helper function to retrieve list of genres from json file"""
+    def __GetGenreList(self):
+        file = open('data.json')
+        data = json.load(file)
+        return data['genres']
 
-    results = sp.search(q='weezer', limit=20)
-    for idx, track in enumerate(results['tracks']['items']):
-        print(idx, track['name'])
-
-    user_id = sp.me()['id']
-    sp.user_playlist_create(user_id, "test playlist")
-
-def get_args():
-    parser = argparse.ArgumentParser(description='Creates a playlist for user')
-    parser.add_argument('-p', '--playlist', required=True,
-                        help='Name of Playlist')
-    parser.add_argument('-d', '--description', required=False, default='',
-                        help='Description of Playlist')
-    return parser.parse_args()
-
-def main2():
-    args = get_args()
-    scope = "playlist-modify-public"
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
-    user_id = sp.me()['id']
-    sp.user_playlist_create(user_id, args.playlist)
-        
 if __name__ == '__main__':
-    # lgp = LatestGenrePlaylist()
-    # lgp.CreateGenreList(["rap", "hip-hop", "r-n-b", "pop"])
-
-    # for genre in lgp.genres:
-    #     print(genre)
-    
-    # lgp.CreateGenreList()
-    #main()
-    main2()
+    lgp = LatestGenrePlaylist()
+    lgp.CreateGenrePlayLists()
+    #lgp.AddNewReleases()
 
 
     
