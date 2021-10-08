@@ -11,6 +11,10 @@ Step 5: Repeat steps above in a crontab via AWS Lambda
 """
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+import boto3
+from botocore.exceptions import ClientError
+from boto3 import resource
+from boto3.dynamodb.conditions import Key
 import json
 from pprint import pprint
 
@@ -115,7 +119,8 @@ class LatestGenrePlaylist:
         
     """ Add list of tracks to playlist"""
     def AddTracksToPlaylist(self, playlist_id, track_ids):
-        self.sp.playlist_add_items(playlist_id, track_ids)
+        playlist_id = self.sp.playlist_add_items(playlist_id, track_ids)
+        print("Playlist id: {}".format(playlist_id))
 
     """ Helper function to retrieve list of genres from json file"""
     def __GetGenreList(self, json_file):
@@ -123,15 +128,23 @@ class LatestGenrePlaylist:
         data = json.load(file)
         return data['genres']
 
-
 if __name__ == '__main__':
-    lgp = LatestGenrePlaylist() 
-    lgp.AddNewReleases()
+    #lgp = LatestGenrePlaylist() 
+    #lgp.AddNewReleases()
 
+    dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
 
+    #response = table.scan()
 
+    table = dynamodb.Table('Playlists')
+    playlists = table.query(
+        KeyConditionExpression=Key('genre').eq('all')
+    )
 
-
-
+    if not playlists['Items']:
+        print("Empty")
+    else:
+        for playlist in playlists['Items']:
+            print(playlist['genre'], ":", playlist['id'])
 
     
