@@ -17,6 +17,7 @@ from boto3 import resource
 from boto3.dynamodb.conditions import Key
 import json
 from pprint import pprint
+import os
 
 class LatestGenrePlaylist:
     """ Initialize instance variables and SpotifyOAuth class to authenticate requests 
@@ -128,10 +129,7 @@ class LatestGenrePlaylist:
         data = json.load(file)
         return data['genres']
 
-if __name__ == '__main__':
-    #lgp = LatestGenrePlaylist() 
-    #lgp.AddNewReleases()
-
+def DatabaseDemo():
     dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
 
     #response = table.scan()
@@ -146,5 +144,33 @@ if __name__ == '__main__':
     else:
         for playlist in playlists['Items']:
             print(playlist['genre'], ":", playlist['id'])
+
+def EventHandler(event, context):
+    CLIENT_USERNAME = os.environ['SPOTIPY_CLIENT_USERNAME']
+    PLAYLIST_ID = os.environ['RECENT_LIKES_PLAYLIST_ID']
+
+    print("Authenticating to Spotify")
+    scope = "user-library-read playlist-modify-public"
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
+    print("Authenticated to Spotify")
+
+    print("Getting playlist tracks.")
+    results = sp.user_playlist_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID)
+    current_tracks = []
+    for track in results['items']:
+        current_tracks.append(track['track']['uri'])
+
+    print("Clearing playlist.")
+    sp.user_playlist_remove_all_occurrences_of_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID, tracks=current_tracks)
+
+if __name__ == '__main__':
+    #lgp = LatestGenrePlaylist() 
+    #lgp.AddNewReleases()
+
+    #DatabaseDemo()
+
+    EventHandler("","")
+
+
 
     
