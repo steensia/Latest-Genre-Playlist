@@ -23,36 +23,63 @@ class LatestGenrePlaylist:
     """ Initialize instance variables and SpotifyOAuth class to authenticate requests 
         Create playlists and store their playlist ids in a dictionary
     """  
-    def __init__(self):
-        self.scope = "playlist-modify-public"
+    def __init__(self, event):
+        self.scope = "user-library-read playlist-modify-public"
+
+        # Authenticate Spotify
         self.sp = spotipy.Spotify(auth_manager = SpotifyOAuth(scope = self.scope))
-        self.user_id = self.sp.me()['id']
-        self.genres = self.CreateGenrePlayLists()
+        self.user_id = os.environ['SPOTIPY_CLIENT_USERNAME']
+        
+        # Collection of existing and to be created playlists
+        self.genres = self.CreateGenrePlayLists(event)
     
     # def CreateGenreList(self, genres: list):
     #     self.genres = genres
 
     """ Create a playlist for each genre in the list 
         and return a dictionary for genre and playlist id pair"""
-    def CreateGenrePlayLists(self):
-        dictionary = {}
-        genres = self.__GetGenreList('data_test.json') 
-        test = True
+    def CreateGenrePlayLists(self, event):
+        # Add 'all' playlist which adds any genre of music to playlist
+        genres = event['genres']
+        genres.append('all')
 
-        if not genres: # data_test has an empty genres list, empty will accept all genres
-            if test:
-                playlistId = self.sp.user_playlist_create(user = self.user_id,
-                                    name = "Latest songs playlist",
-                                    public = True)
-                dictionary['all'] = playlistId['id']
-        else:
-            for genre in self.genres:
-                playlistId = self.sp.user_playlist_create(user = self.user_id,
-                                            name = "Latest {} songs playlist".format(genre),
-                                            public = True)
-            dictionary[genre] = playlistId['id']
+        # Keep track of playlist genre and spotify id
+        dictionary = {}
+
+        # Initailize DB and set up table to query
+        dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
+        table = dynamodb.Table('Playlists')
+
+        # Check JSON for what genres are of interest        
+        for genre in genres:
+            playlist = table.query(
+                KeyConditionExpression=Key('genre').eq(genre)
+            )
+
+            playlist_genre = playlist['genre']
+            playlist_id = playlist['id']
+
+            # Create playlist and add to database if doesn't exist
+            if not playlist['Items']:
+                playlist_id = self.sp.user_playlist_create(user = self.user_id,
+                name = "Latest songs playlist",
+                public = True)
+                
+                # Insert genre playlist to database
+                response = table.put_item(
+                    Item = {
+                        'genre' : 'all',
+                        'id' : playlist_id
+                    }
+                )    
+                print(response)
+                dictionary['all'] = playlist_id
+
+            # Add playlist genre and id
+            dictionary[playlist_genre] = playlist_id
 
         return dictionary
+        
     """ Add new released songs to the playlists"""
     def AddNewReleases(self):
         # Grab album IDs for new released songs
@@ -146,6 +173,8 @@ def DatabaseDemo():
             print(playlist['genre'], ":", playlist['id'])
 
 def DatabaseDemo2(event):
+    print(event['genres'])
+
     dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
     table = dynamodb.Table("Playlists")
     playlists = table.scan()['Items']
@@ -155,47 +184,110 @@ def DatabaseDemo2(event):
         genre = playlist['genre']
         genres.append(genre)
         print(genre)
+
+
+def DatabaseDemo3(event):
+    scope = "user-library-read playlist-modify-public"
+
+    # Authenticate Spotify
+    sp = spotipy.Spotify(auth_manager = SpotifyOAuth(scope = scope))
+    user_id = os.environ['SPOTIPY_CLIENT_USERNAME']
+
+    dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
+
+    if not event['genres']: 
+        table = dynamodb.Table('Playlists')
+        playlists = table.query(
+            KeyConditionExpression=Key('genre').eq('all')
+        )
+
+    if not playlists['Items']:
+        playlistId = sp.user_playlist_create(user = user_id,
+                        name = "Latest songs playlist",
+                        public = True)
+
+        response = table.get_item(
+            Key = {
+                'all' : playlistId
+            }
+        )    
+
+        print(response)
+
+def DatabaseDemo4(event):
+    dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
+    table = dynamodb.Table('Playlists')
+
+    # Insert genre playlist to database
+    # response = table.put_item(
+    #     Item = {
+    #         'genre' : 'all',
+    #         'id' : 'spotify:playlist:2fLku8TI4bjuJAzGH8NBjD'
+    #     }
+    # )
+
+    response = table.get_item(
+        Key = {
+            'genre' : 'all',
+            'id': 'spotify:playlist:2fLku8TI4bjuJAzGH8NBjD'
+        }
+    )     
+
+    print(response)
+
+def DatabaseDemo5(event):
+    dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
+    table = dynamodb.Table('Playlists')
+    playlists = table.scan()['Items']
+
+    event['genres'].append('test')
+    print(event['genres'])
+
+    # if not event['genres']:
+    #     for playlist, c in playlists:
+    #         if playlist['genre'] == 'all':
+    #             print(playlist['id'])
+    # else:
+    #     for genre, base in event['genres'], "all2":
+    #         print("{} {}".format(genre, base))
+
+def SpotifyExample():
+    CLIENT_USERNAME = os.environ['SPOTIPY_CLIENT_USERNAME']
+    PLAYLIST_ID = os.environ['RECENT_LIKES_PLAYLIST_ID']
+    PLAYLIST_LEN = int(os.environ['RECENT_LIKES_PLAYLIST_LEN'])
     
-def handler(event, context):
+    print("Authenticating to Spotify")
+    scope = "user-library-read playlist-modify-public"
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
+    print("Authenticated to Spotify")
+    
+    print("Getting playlist tracks.")
+    results = sp.user_playlist_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID)
+    current_tracks = []
+    for track in results['items']:
+        current_tracks.append(track['track']['uri'])
+    
+    print("Clearing playlist.")
+    sp.user_playlist_remove_all_occurrences_of_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID, tracks=current_tracks)
+    
+    print("Get liked tracks.")
+    results = sp.current_user_saved_tracks(limit=PLAYLIST_LEN)
+    recent_likes = []
+    for idx, item in enumerate(results['items']):
+        track = item['track']
+        print(idx, track['artists'][0]['name'], " – ", track['name'])
+        recent_likes.append(track['uri'])
+    
+    print("Add liked tracks.")
+    sp.user_playlist_add_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID, tracks=recent_likes)
+    
+def EventHandler(event, context):
     print("Test handler")
-    DatabaseDemo2(event)
-    #CLIENT_USERNAME = os.environ['SPOTIPY_CLIENT_USERNAME']
-    #PLAYLIST_ID = os.environ['RECENT_LIKES_PLAYLIST_ID']
-    #PLAYLIST_LEN = int(os.environ['RECENT_LIKES_PLAYLIST_LEN'])
-    #
-    #print("Authenticating to Spotify")
-    #scope = "user-library-read playlist-modify-public"
-    #sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
-    #print("Authenticated to Spotify")
-    #
-    #print("Getting playlist tracks.")
-    #results = sp.user_playlist_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID)
-    #current_tracks = []
-    #for track in results['items']:
-    #    current_tracks.append(track['track']['uri'])
-    #
-    #print("Clearing playlist.")
-    #sp.user_playlist_remove_all_occurrences_of_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID, tracks=current_tracks)
-    #
-    #print("Get liked tracks.")
-    #results = sp.current_user_saved_tracks(limit=PLAYLIST_LEN)
-    #recent_likes = []
-    #for idx, item in enumerate(results['items']):
-    #    track = item['track']
-    #    print(idx, track['artists'][0]['name'], " – ", track['name'])
-    #    recent_likes.append(track['uri'])
-    #
-    #print("Add liked tracks.")
-    #sp.user_playlist_add_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID, tracks=recent_likes)
-
+    #Remove this after deploying, we will be getting event as constant JSON in AWS rule
+    #json_string = '{ "genres": ["all"] }'
+    #event = json.loads(json_string)
+    #DatabaseDemo4(event)
+    SpotifyExample()
+    
 if __name__ == '__main__':
-    #lgp = LatestGenrePlaylist() 
-    #lgp.AddNewReleases()
-
-    #DatabaseDemo()
-    
-    handler("","")
-
-
-
-    
+    EventHandler("","")

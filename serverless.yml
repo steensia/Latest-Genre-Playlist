@@ -30,7 +30,7 @@ package:
 
 functions:
   latest-genre-playlist:
-    handler: latest-genre-playlist.handler
+    handler: latest-genre-playlist.EventHandler
     events:
       - schedule: cron(0/1 * * * ? *)
     environment:
