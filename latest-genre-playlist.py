@@ -54,29 +54,31 @@ class LatestGenrePlaylist:
         for genre in genres:
             playlist = table.query(
                 KeyConditionExpression=Key('genre').eq(genre)
-            )
+            )['Items']
 
-            playlist_genre = playlist['genre']
-            playlist_id = playlist['id']
-
-            # Create playlist and add to database if doesn't exist
-            if not playlist['Items']:
+            #Create playlist and add to database if doesn't exist
+            if not playlist:
                 playlist_id = self.sp.user_playlist_create(user = self.user_id,
-                name = "Latest songs playlist",
-                public = True)
-                
+                                                            name = "Latest songs playlist",
+                                                            public = True)['uri']
                 # Insert genre playlist to database
                 response = table.put_item(
                     Item = {
-                        'genre' : 'all',
+                        'genre' : genre,
                         'id' : playlist_id
                     }
                 )    
                 print(response)
-                dictionary['all'] = playlist_id
+                # Add playlist genre and id
+                dictionary[genre] = playlist_id
+            else:
+                # Grab the first and only element
+                playlist = playlist[0]
+                playlist_genre = playlist['genre']
+                playlist_id = playlist['id']
 
-            # Add playlist genre and id
-            dictionary[playlist_genre] = playlist_id
+                # Add playlist genre and id
+                dictionary[playlist_genre] = playlist_id
 
         return dictionary
         
@@ -155,139 +157,14 @@ class LatestGenrePlaylist:
         file = open(json_file)
         data = json.load(file)
         return data['genres']
-
-def DatabaseDemo():
-    dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
-
-    #response = table.scan()
-
-    table = dynamodb.Table('Playlists')
-    playlists = table.query(
-        KeyConditionExpression=Key('genre').eq('all')
-    )
-
-    if not playlists['Items']:
-        print("Empty")
-    else:
-        for playlist in playlists['Items']:
-            print(playlist['genre'], ":", playlist['id'])
-
-def DatabaseDemo2(event):
-    print(event['genres'])
-
-    dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
-    table = dynamodb.Table("Playlists")
-    playlists = table.scan()['Items']
-    
-    genres = []
-    for playlist in playlists:
-        genre = playlist['genre']
-        genres.append(genre)
-        print(genre)
-
-
-def DatabaseDemo3(event):
-    scope = "user-library-read playlist-modify-public"
-
-    # Authenticate Spotify
-    sp = spotipy.Spotify(auth_manager = SpotifyOAuth(scope = scope))
-    user_id = os.environ['SPOTIPY_CLIENT_USERNAME']
-
-    dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
-
-    if not event['genres']: 
-        table = dynamodb.Table('Playlists')
-        playlists = table.query(
-            KeyConditionExpression=Key('genre').eq('all')
-        )
-
-    if not playlists['Items']:
-        playlistId = sp.user_playlist_create(user = user_id,
-                        name = "Latest songs playlist",
-                        public = True)
-
-        response = table.get_item(
-            Key = {
-                'all' : playlistId
-            }
-        )    
-
-        print(response)
-
-def DatabaseDemo4(event):
-    dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
-    table = dynamodb.Table('Playlists')
-
-    # Insert genre playlist to database
-    # response = table.put_item(
-    #     Item = {
-    #         'genre' : 'all',
-    #         'id' : 'spotify:playlist:2fLku8TI4bjuJAzGH8NBjD'
-    #     }
-    # )
-
-    response = table.get_item(
-        Key = {
-            'genre' : 'all',
-            'id': 'spotify:playlist:2fLku8TI4bjuJAzGH8NBjD'
-        }
-    )     
-
-    print(response)
-
-def DatabaseDemo5(event):
-    dynamodb = boto3.resource("dynamodb", region_name='us-west-2')
-    table = dynamodb.Table('Playlists')
-    playlists = table.scan()['Items']
-
-    event['genres'].append('test')
-    print(event['genres'])
-
-    # if not event['genres']:
-    #     for playlist, c in playlists:
-    #         if playlist['genre'] == 'all':
-    #             print(playlist['id'])
-    # else:
-    #     for genre, base in event['genres'], "all2":
-    #         print("{} {}".format(genre, base))
-
-def SpotifyExample():
-    CLIENT_USERNAME = os.environ['SPOTIPY_CLIENT_USERNAME']
-    PLAYLIST_ID = os.environ['RECENT_LIKES_PLAYLIST_ID']
-    PLAYLIST_LEN = int(os.environ['RECENT_LIKES_PLAYLIST_LEN'])
-    
-    print("Authenticating to Spotify")
-    scope = "user-library-read playlist-modify-public"
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
-    print("Authenticated to Spotify")
-    
-    print("Getting playlist tracks.")
-    results = sp.user_playlist_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID)
-    current_tracks = []
-    for track in results['items']:
-        current_tracks.append(track['track']['uri'])
-    
-    print("Clearing playlist.")
-    sp.user_playlist_remove_all_occurrences_of_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID, tracks=current_tracks)
-    
-    print("Get liked tracks.")
-    results = sp.current_user_saved_tracks(limit=PLAYLIST_LEN)
-    recent_likes = []
-    for idx, item in enumerate(results['items']):
-        track = item['track']
-        print(idx, track['artists'][0]['name'], " – ", track['name'])
-        recent_likes.append(track['uri'])
-    
-    print("Add liked tracks.")
-    sp.user_playlist_add_tracks(user=CLIENT_USERNAME, playlist_id=PLAYLIST_ID, tracks=recent_likes)
     
 def EventHandler(event, context):
-    print("Test handler")
-    #Remove this after deploying, we will be getting event as constant JSON in AWS rule
-    #json_string = '{ "genres": ["all"] }'
-    #event = json.loads(json_string)
-    #DatabaseDemo4(event)
-    SpotifyExample()
+    # For local testing
+    if not event:
+        json_string = '{ "genres": [] }'
+        event = json.loads(json_string)
+    lgp = LatestGenrePlaylist(event)
+    print(lgp.genres)
     
 if __name__ == '__main__':
     EventHandler("","")
