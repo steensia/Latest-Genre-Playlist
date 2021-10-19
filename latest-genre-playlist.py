@@ -103,8 +103,8 @@ class LatestGenrePlaylist:
         # TODO: Add logic to check for date released
 
         # TODO: Adding one album for now, remove this after testing
-        response = self.sp.new_releases(country="US", limit=1, offset=1)
-        #response = self.sp.new_releases()
+        #response = self.sp.new_releases(country="US", limit=1, offset=1)
+        response = self.sp.new_releases(country="US", limit=4, offset=0)
         album_ids = []
 
         while response:
@@ -134,9 +134,12 @@ class LatestGenrePlaylist:
     #             print(genre)
     #     pprint(artist)
     
-    """ Get each track inside the albums """
+    """ Get each track inside the albums and return list of track ids
+        Limit of 100 track ids to add to a playlist per request
+    """
     def GetTrackIds(self, album_ids):
         track_ids = []
+        track_ids_list = []
 
         for album_id in album_ids:
             album = self.sp.album("spotify:album:{}".format(album_id))
@@ -144,15 +147,29 @@ class LatestGenrePlaylist:
                 track_id = track['id'];
                 track_ids.append(track_id)
 
-        return track_ids
+                if(len(track_ids) == 100):                 
+                    track_ids_list.append(track_ids)
+                    track_ids = []
+      
+            track_ids_list.append(track_ids)
+        print(len(track_ids_list))
+        return track_ids_list
         
     """ Add list of tracks to playlist"""
-    def AddTracksToPlaylist(self, playlist_id, track_ids):
-        #print(track_ids)
-        #print(len(track_ids))
-        # TODO: Account for track ids > 100
-        playlist_id = self.sp.playlist_add_items(playlist_id, track_ids)
-        print("Playlist id: {}".format(playlist_id))
+    def AddTracksToPlaylist(self, playlist_id, track_ids_list):
+        count = 0
+        for list in track_ids_list:
+            count += len(list)
+            self.sp.playlist_add_items(playlist_id, list)
+        print("Added {} tracks".format(count))     
+
+    """ Remove list of tracks in playlist"""
+    def RemoveTracksInPlaylist(self, playlist_id, track_ids_list):
+        count = 0
+        for list in track_ids_list:
+            count += len(list)
+            self.sp.playlist_remove_all_occurrences_of_items(playlist_id, list)
+        print("Removed {} tracks".format(count))       
 
     """ Helper function to retrieve list of genres from json file"""
     def __GetGenreList(self, json_file):
@@ -170,10 +187,12 @@ def EventHandler(event, context):
     album_ids = lgp.SearchNewReleases()
     track_ids = lgp.GetTrackIds(album_ids)
 
-    response = lgp.AddTracksToPlaylist(playlist_id=lgp.genres['all'], track_ids=track_ids)
+    all = lgp.genres['all']
+
+    response = lgp.AddTracksToPlaylist(all, track_ids)
     # TODO: Remove after testing
     if True == True:
-        remove = lgp.sp.playlist_remove_all_occurrences_of_items(lgp.genres['all'], track_ids)
+        lgp.RemoveTracksInPlaylist(all, track_ids)
     
 if __name__ == '__main__':
     EventHandler("","")
