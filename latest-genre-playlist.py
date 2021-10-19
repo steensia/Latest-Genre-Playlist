@@ -18,6 +18,7 @@ from boto3.dynamodb.conditions import Key
 import json
 from pprint import pprint
 import os
+from datetime import date, datetime, timedelta
 
 class LatestGenrePlaylist:
     """ Initialize instance variables and SpotifyOAuth class to authenticate requests 
@@ -42,6 +43,7 @@ class LatestGenrePlaylist:
         # Add 'all' playlist which adds any genre of music to playlist
         genres = event['genres']
         genres.append('all')
+        genres.append('recent')
 
         # Keep track of playlist genre and spotify id
         dictionary = {}
@@ -100,32 +102,29 @@ class LatestGenrePlaylist:
     def SearchNewReleases(self):
         # TODO: Add logic to check for date released
 
-        response = self.sp.new_releases(country = "US", limit = 2, offset = 2)
+        # TODO: Adding one album for now, remove this after testing
+        response = self.sp.new_releases(country="US", limit=1, offset=1)
+        #response = self.sp.new_releases()
         album_ids = []
 
         while response:
             albums = response['albums']
             for i, item in enumerate(albums['items'], 1):
-                # TODO: Add logic to accept albums
-                #if item['album_type'] == "single":
-                album_id = item['id']
-                album_ids.append(album_id)
+                # TODO: Add logic to accept albums or singles
+                today = datetime.combine(datetime.today(), datetime.min.time())
+                past = today - timedelta(days=4)
+                album_date = datetime.strptime(item['release_date'], '%Y-%m-%d')
+                before_album_date = album_date - timedelta(days=4)
+
+                # TODO: Replace this logic with new releases today (album_date > today)
+                if before_album_date <= album_date <= today:
+                    print("Added New Release #{}: {} by {} ".format(albums['offset'] + i, item['name'], item['artists'][0]['name']))
+                    album_id = item['id']
+                    album_ids.append(album_id)
+
             response = None
-        
+
         return album_ids
-            # if albums['next']:
-            #    response = self.sp.next(albums)
-            # else:
-            #    response = None
-            
-            # Keep this to check genre type by grabbing artists and finding their genres
-            # if(item['album_type'] == "single"):
-            #     artists = item['artists']
-            #     names = []
-            #     for artist in artists:
-            #         names.append(artist['name'])
-            #         print(artist['id'])
-            #
 
     # def show_artist(self):
     #     uri = "spotify:artist:3Y7RZ31TRPVadSFVy1o8os"
@@ -149,6 +148,9 @@ class LatestGenrePlaylist:
         
     """ Add list of tracks to playlist"""
     def AddTracksToPlaylist(self, playlist_id, track_ids):
+        #print(track_ids)
+        #print(len(track_ids))
+        # TODO: Account for track ids > 100
         playlist_id = self.sp.playlist_add_items(playlist_id, track_ids)
         print("Playlist id: {}".format(playlist_id))
 
@@ -164,7 +166,14 @@ def EventHandler(event, context):
         json_string = '{ "genres": [] }'
         event = json.loads(json_string)
     lgp = LatestGenrePlaylist(event)
-    print(lgp.genres)
+    #print(lgp.genres)
+    album_ids = lgp.SearchNewReleases()
+    track_ids = lgp.GetTrackIds(album_ids)
+
+    response = lgp.AddTracksToPlaylist(playlist_id=lgp.genres['all'], track_ids=track_ids)
+    # TODO: Remove after testing
+    if True == True:
+        remove = lgp.sp.playlist_remove_all_occurrences_of_items(lgp.genres['all'], track_ids)
     
 if __name__ == '__main__':
     EventHandler("","")
