@@ -104,7 +104,7 @@ class LatestGenrePlaylist:
 
         # TODO: Adding one album for now, remove this after testing
         #response = self.sp.new_releases(country="US", limit=1, offset=1)
-        response = self.sp.new_releases(country="US", limit=4, offset=0)
+        response = self.sp.new_releases(country="US", limit=10, offset=0)
         album_ids = []
 
         while response:
@@ -118,7 +118,8 @@ class LatestGenrePlaylist:
 
                 # TODO: Replace this logic with new releases today (album_date > today)
                 if before_album_date <= album_date <= today:
-                    print("Added New Release #{}: {} by {} ".format(albums['offset'] + i, item['name'], item['artists'][0]['name']))
+                    print("Added New Release #{} with {} tracks: {} by {} ".format(
+                        albums['offset'] + i, item['total_tracks'], item['name'], item['artists'][0]['name']))
                     album_id = item['id']
                     album_ids.append(album_id)
 
@@ -135,24 +136,22 @@ class LatestGenrePlaylist:
     #     pprint(artist)
     
     """ Get each track inside the albums and return list of track ids
-        Limit of 100 track ids to add to a playlist per request
+        Separate tracks per album
     """
     def GetTrackIds(self, album_ids):
-        track_ids = []
+
         track_ids_list = []
 
         for album_id in album_ids:
+            track_ids = []
             album = self.sp.album("spotify:album:{}".format(album_id))
+
             for track in album['tracks']['items']:
                 track_id = track['id'];
-                track_ids.append(track_id)
-
-                if(len(track_ids) == 100):                 
-                    track_ids_list.append(track_ids)
-                    track_ids = []
-      
+                track_ids.append(track_id)    
+                      
             track_ids_list.append(track_ids)
-        print(len(track_ids_list))
+
         return track_ids_list
         
     """ Add list of tracks to playlist"""
