@@ -100,17 +100,14 @@ class LatestGenrePlaylist:
 
     """ Search for new released songs based on genre and return list of album ids """
     def SearchNewReleases(self):
-        # TODO: Add logic to check for date released
-
         # TODO: Adding one album for now, remove this after testing
-        #response = self.sp.new_releases(country="US", limit=1, offset=1)
-        response = self.sp.new_releases(country="US", limit=10, offset=0)
+        response = self.sp.new_releases(country="US", limit=1, offset=1)
+        #response = self.sp.new_releases(country="US", limit=2, offset=1)
         album_ids = []
 
         while response:
             albums = response['albums']
             for i, item in enumerate(albums['items'], 1):
-                # TODO: Add logic to accept albums or singles
                 today = datetime.combine(datetime.today(), datetime.min.time())
                 past = today - timedelta(days=4)
                 album_date = datetime.strptime(item['release_date'], '%Y-%m-%d')
@@ -118,8 +115,8 @@ class LatestGenrePlaylist:
 
                 # TODO: Replace this logic with new releases today (album_date > today)
                 if before_album_date <= album_date <= today:
-                    print("Added New Release #{} with {} tracks: {} by {} ".format(
-                        albums['offset'] + i, item['total_tracks'], item['name'], item['artists'][0]['name']))
+                    print("Added New Release #{} with {} track(s) released on {}: {} by {} ".format(
+                        albums['offset'] + i, item['total_tracks'], album_date, item['name'], item['artists'][0]['name']))
                     album_id = item['id']
                     album_ids.append(album_id)
 
@@ -147,19 +144,39 @@ class LatestGenrePlaylist:
             album = self.sp.album("spotify:album:{}".format(album_id))
 
             for track in album['tracks']['items']:
-                track_id = track['id'];
+                track_id = track['uri'];
                 track_ids.append(track_id)    
                       
-            track_ids_list.append(track_ids)
-
+            #track_ids_list.append(track_ids[0])
+        test = []
+        #print(track_ids[:3])
+        test.append(track_ids[:3])
+        track_ids_list.append(test)
         return track_ids_list
+    """Get current playlist and return tracks"""
+    def GetPlaylistTracks(self, playlist_id):
+        response = self.sp.playlist(playlist_id)
+
+        track_ids = []
+        for track in response['tracks']['items']:
+            track_ids.append(track['track']['uri'])
+            #print(track['track']['uri'])
+
+        return track_ids
         
     """ Add list of tracks to playlist"""
     def AddTracksToPlaylist(self, playlist_id, track_ids_list):
         count = 0
+        # Get existing trackins from playlist
+        prev_list = self.GetPlaylistTracks(playlist_id)
+        #print("Prev list {}".format(prev_list))
         for list in track_ids_list:
-            count += len(list)
-            self.sp.playlist_add_items(playlist_id, list)
+            #print("List {}".format(list[0]))
+            new_list = [id for id in list[0] if id not in prev_list]
+            #print("New list {}".format(new_list))
+            count += len(new_list)
+            if new_list:
+                self.sp.playlist_add_items(playlist_id, new_list)
         print("Added {} tracks".format(count))     
 
     """ Remove list of tracks in playlist"""
@@ -186,12 +203,17 @@ def EventHandler(event, context):
     album_ids = lgp.SearchNewReleases()
     track_ids = lgp.GetTrackIds(album_ids)
 
-    all = lgp.genres['all']
+    playlist_id = lgp.genres['all']
 
-    response = lgp.AddTracksToPlaylist(all, track_ids)
+    lgp.AddTracksToPlaylist(playlist_id, track_ids)
     # TODO: Remove after testing
-    if True == True:
-        lgp.RemoveTracksInPlaylist(all, track_ids)
+    if True == False:
+        lgp.RemoveTracksInPlaylist(playlist_id, track_ids)
+    
+    response = lgp.GetPlaylistTracks(playlist_id)
+    #pprint(response)
+
+    #print(response['tracks']['items'])
     
 if __name__ == '__main__':
     EventHandler("","")
