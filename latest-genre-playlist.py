@@ -136,7 +136,6 @@ class LatestGenrePlaylist:
         Separate tracks per album
     """
     def GetTrackIds(self, album_ids):
-
         track_ids_list = []
 
         for album_id in album_ids:
@@ -146,12 +145,8 @@ class LatestGenrePlaylist:
             for track in album['tracks']['items']:
                 track_id = track['uri'];
                 track_ids.append(track_id)    
-                      
-            #track_ids_list.append(track_ids[0])
-        test = []
-        #print(track_ids[:3])
-        test.append(track_ids[:3])
-        track_ids_list.append(test)
+
+            track_ids_list.append(track_ids)
         return track_ids_list
     """Get current playlist and return tracks"""
     def GetPlaylistTracks(self, playlist_id):
@@ -160,8 +155,7 @@ class LatestGenrePlaylist:
         track_ids = []
         for track in response['tracks']['items']:
             track_ids.append(track['track']['uri'])
-            #print(track['track']['uri'])
-
+            
         return track_ids
         
     """ Add list of tracks to playlist"""
@@ -170,9 +164,9 @@ class LatestGenrePlaylist:
         # Get existing trackins from playlist
         prev_list = self.GetPlaylistTracks(playlist_id)
         #print("Prev list {}".format(prev_list))
-        for list in track_ids_list:
-            #print("List {}".format(list[0]))
-            new_list = [id for id in list[0] if id not in prev_list]
+        for curr_list in track_ids_list:
+            #print("Curr List {}".format(curr_list))
+            new_list = [id for id in curr_list if id not in prev_list]
             #print("New list {}".format(new_list))
             count += len(new_list)
             if new_list:
