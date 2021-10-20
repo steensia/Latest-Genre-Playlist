@@ -26,17 +26,13 @@ class LatestGenrePlaylist:
         Create playlists and store their playlist ids in a dictionary
     """  
     def __init__(self, event):
-        self.scope = "user-library-read playlist-modify-public"
-
         # Authenticate Spotify
+        self.scope = "user-library-read playlist-modify-public"
         self.sp = spotipy.Spotify(auth_manager = SpotifyOAuth(scope = self.scope))
         self.user_id = os.environ['SPOTIPY_CLIENT_USERNAME']
         
         # Collection of existing and to be created playlists
         self.genres = self.CreateGenrePlayLists(event)
-    
-    # def CreateGenreList(self, genres: list):
-    #     self.genres = genres
 
     """ Create a playlist for each genre in the list 
         and return a dictionary for genre and playlist id pair"""
@@ -70,7 +66,7 @@ class LatestGenrePlaylist:
                         'id' : playlist_id
                     }
                 )    
-                print(response)
+
                 # Add playlist genre and id
                 dictionary[genre] = playlist_id
             else:
@@ -94,38 +90,26 @@ class LatestGenrePlaylist:
 
         # Add tracks to playlist(s)
         for genre in self.genres:
-            #print(genre)
-            playlist_id = self.genres[genre]
             self.AddTracksToPlaylist(genre, track_ids)
-            self.RemoveTracksInPlaylist(genre, track_ids)
+            #self.__RemoveTracksInPlaylist(genre, track_ids)
 
     """ Search for new released songs based on genre and return list of album ids """
     def SearchNewReleases(self):
-        # TODO: Adding one album for now, remove this after testing
-        response = self.sp.new_releases(country="US", limit=2, offset=1)
-        #response = self.sp.new_releases(country="US", limit=2, offset=1)
+        response = self.sp.new_releases(country="US", limit=20, offset=0)
         album_ids = []
 
-        while response:
-            albums = response['albums']
-            for i, item in enumerate(albums['items'], 1):
-                today = datetime.combine(datetime.today(), datetime.min.time())
-                album_date = datetime.strptime(item['release_date'], '%Y-%m-%d')
-                before_album_date = album_date - timedelta(days=4)
+        albums = response['albums']
+        for i, item in enumerate(albums['items'], 1):
+            today = datetime.combine(datetime.today(), datetime.min.time())
+            album_date = datetime.strptime(item['release_date'], '%Y-%m-%d')
 
-                # TODO: Replace this logic with new releases today (album_date > today)
-                if before_album_date <= album_date <= today:
-                    print("Added New Release #{} with {} track(s) released on {}: {} by {} ".format(
-                        albums['offset'] + i, item['total_tracks'], album_date, item['name'], item['artists'][0]['name']))
-                    album_id = item['id']
-                    album_ids.append(album_id)
+            if album_date >= today:
+                print("Added New Release #{} with {} track(s) released on {}: {} by {} ".format(
+                    albums['offset'] + i, item['total_tracks'], album_date, item['name'], item['artists'][0]['name']))
+                album_id = item['id']
+                album_ids.append(album_id)
 
-            response = None
         return album_ids
-
-    def __intersection(self, list1, list2):
-        list3 = [value for value in list1 if value in list2]
-        return list3
 
     """ Get the album's genre based on the artist and return it """
     def GetTrackGenre(self, artist_id):
@@ -168,6 +152,7 @@ class LatestGenrePlaylist:
         for curr_list in track_ids_list:
             count = 0
             new_list = [id for id in curr_list if id not in prev_list]
+        
             # Get first track of album to identify artist's genre
             if new_list:
                 count += len(new_list)
@@ -176,65 +161,21 @@ class LatestGenrePlaylist:
                 track = self.sp.track(track_id=new_list[0])               
                 trackGenres = self.GetTrackGenre(artist_id=track['artists'][0]['uri'])
                 if genre in trackGenres:
-                    print("Common")
                     self.sp.playlist_add_items(playlist_id, new_list)
                     print("Added {} tracks to 'Latest {} songs playlist'".format(count, genre))
                 else:
                     if genre == 'all':
                         self.sp.playlist_add_items(playlist_id, new_list)
-                        print("Added {} tracks to 'Latest songs playlist'".format(count, genre))
-                # try:
-                #     track = self.sp.track(track_id=new_list[0])               
-                #     trackGenres = self.GetTrackGenre(artist_id=track['artists'][0]['uri'])
-                #     print(trackGenres)
-                #     if self.genres[genre] == playlist_id:
-                #         self.sp.playlist_add_items(playlist_id, new_list)
-                #         print("Added {} tracks to 'Latest {} songs playlist'".format(count, genre))   
-                #     else:
-                #         genre = 'all'
-                #         self.sp.playlist_add_items(playlist_id, new_list)
-                #         print("Added {} tracks to 'Latest songs playlist'".format(count, genre)) 
-                # # Genre playlist does not exist for this track, add to 'all' playlist
-                # except:
-                #     print("Playlist genre does not exist")                 
- 
-    """ Remove list of tracks in playlist"""
-    def RemoveTracksInPlaylist(self, genre, track_ids_list):
+                        print("Added {} tracks to 'Latest songs playlist'".format(count, genre))            
+
+    """ Helper function to remove existing tracks in playlist"""
+    def __RemoveTracksInPlaylist(self, genre, track_ids_list):
         playlist_id = self.genres[genre]
 
         count = 0
         for list in track_ids_list:
             count += len(list)
-            self.sp.playlist_remove_all_occurrences_of_items(playlist_id, list)
-        print("Removed {} tracks".format(count))       
-
-    """ Helper function to retrieve list of genres from json file"""
-    def __GetGenreList(self, json_file):
-        file = open(json_file)
-        data = json.load(file)
-        return data['genres']
-    
-def EventHandler2(event, context):
-    # For local testing
-    if not event:
-        json_string = '{ "genres": ["rap"] }'
-        event = json.loads(json_string)
-    lgp = LatestGenrePlaylist(event)
-
-    album_ids = lgp.SearchNewReleases()
-    track_ids = lgp.GetTrackIds(album_ids)
-
-    for genre in lgp.genres:
-        playlist_id = lgp.genres[genre]
-        #print("Genre: {} with id {}".format(genre, playlist_id))
-        lgp.AddTracksToPlaylist(playlist_id, track_ids)
-
-    # TODO: Remove after testing
-    if True == True:
-        for genre in lgp.genres:
-            playlist_id = lgp.genres[genre]
-            #print("Genre: {} with id {}".format(genre, playlist_id))
-            lgp.RemoveTracksInPlaylist(playlist_id, track_ids)
+            self.sp.playlist_remove_all_occurrences_of_items(playlist_id, list)  
 
 def EventHandler(event, context):
     if not event:
@@ -242,10 +183,7 @@ def EventHandler(event, context):
     event = json.loads(json_string)
 
     lgp = LatestGenrePlaylist(event)
-    print(lgp.genres)
     lgp.AddNewReleases()
 
 if __name__ == '__main__':
     EventHandler("","")
-    #EventHandler2("","")
-
