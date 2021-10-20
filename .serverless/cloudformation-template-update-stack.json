@@ -207,9 +207,9 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/latest-genre-playlist/dev/1634595178633-2021-10-18T22:12:58.633Z/latest-genre-playlist.zip"
+          "S3Key": "serverless/latest-genre-playlist/dev/1634695480317-2021-10-20T02:04:40.317Z/latest-genre-playlist.zip"
         },
-        "Handler": "s_latest_genre_playlist.EventHandler",
+        "Handler": "s_latest_genre_playlist.handler",
         "Runtime": "python3.8",
         "FunctionName": "latest-genre-playlist-dev-latest-genre-playlist",
         "MemorySize": 1024,
@@ -235,14 +235,14 @@
         "LatestDashgenreDashplaylistLogGroup"
       ]
     },
-    "LatestDashgenreDashplaylistLambdaVersionq06TiX6b3ZmxnqIEtmLEKlDLMXJzZINXbPViSqqaQ": {
+    "LatestDashgenreDashplaylistLambdaVersionWo3418cuvWbzJ1q3Eudu2fW3t48JEzcpUZrBbQjro": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "LatestDashgenreDashplaylistLambdaFunction"
         },
-        "CodeSha256": "iLZ2AFyVyB+ox65qZNK5TysAcCEzG759x/CxpUM+K+k="
+        "CodeSha256": "YE046K23r6gQfX7Y0yxA3PO9z4hOSdkkIW8H27K46l8="
       }
     },
     "LatestDashgenreDashplaylistEventsRuleSchedule1": {
@@ -316,7 +316,7 @@
     "LatestDashgenreDashplaylistLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "LatestDashgenreDashplaylistLambdaVersionq06TiX6b3ZmxnqIEtmLEKlDLMXJzZINXbPViSqqaQ"
+        "Ref": "LatestDashgenreDashplaylistLambdaVersionWo3418cuvWbzJ1q3Eudu2fW3t48JEzcpUZrBbQjro"
       },
       "Export": {
         "Name": "sls-latest-genre-playlist-dev-LatestDashgenreDashplaylistLambdaFunctionQualifiedArn"

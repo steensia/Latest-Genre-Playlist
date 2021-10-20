@@ -22,7 +22,8 @@ import os
 from datetime import date, datetime, timedelta
 
 class LatestGenrePlaylist:
-    """ Initialize instance variables and SpotifyOAuth class to authenticate requests 
+    """ 
+        Initialize instance variables and SpotifyOAuth class to authenticate requests 
         Create playlists and store their playlist ids in a dictionary
     """  
     def __init__(self, event):
@@ -34,8 +35,10 @@ class LatestGenrePlaylist:
         # Collection of existing and to be created playlists
         self.genres = self.CreateGenrePlayLists(event)
 
-    """ Create a playlist for each genre in the list 
-        and return a dictionary for genre and playlist id pair"""
+    """ 
+        Create a playlist for each genre in the list 
+        and return a dictionary for genre and playlist id pair
+    """
     def CreateGenrePlayLists(self, event):
         # Add 'all' playlist which adds any genre of music to playlist
         genres = event['genres']
@@ -80,7 +83,7 @@ class LatestGenrePlaylist:
 
         return dictionary
         
-    """ Add new released songs to the playlists"""
+    """ Add new released songs to the playlists """
     def AddNewReleases(self):
         # Grab album IDs for new released songs
         album_ids = self.SearchNewReleases()
@@ -95,7 +98,7 @@ class LatestGenrePlaylist:
 
     """ Search for new released songs based on genre and return list of album ids """
     def SearchNewReleases(self):
-        response = self.sp.new_releases(country="US", limit=20, offset=0)
+        response = self.sp.new_releases(country="US", limit=5, offset=0)
         album_ids = []
 
         albums = response['albums']
@@ -104,7 +107,7 @@ class LatestGenrePlaylist:
             album_date = datetime.strptime(item['release_date'], '%Y-%m-%d')
 
             if album_date >= today:
-                print("Added New Release #{} with {} track(s) released on {}: {} by {} ".format(
+                print("Found New Release #{} with {} track(s) released on {}: {} by {} ".format(
                     albums['offset'] + i, item['total_tracks'], album_date, item['name'], item['artists'][0]['name']))
                 album_id = item['id']
                 album_ids.append(album_id)
@@ -115,8 +118,9 @@ class LatestGenrePlaylist:
     def GetTrackGenre(self, artist_id):
         return self.sp.artist(artist_id)['genres'] 
  
-    """ Get each track inside the albums and return list of track ids
-        Separate tracks per album
+    """ 
+        Get each track inside the albums and return list of track ids
+        Separated as a list of tracks per album
     """
     def GetTrackIds(self, album_ids):
         track_ids_list = []
@@ -132,7 +136,7 @@ class LatestGenrePlaylist:
             track_ids_list.append(track_ids)
         return track_ids_list
 
-    """Get current playlist and return tracks"""
+    """ Get current playlist and return tracks """
     def GetPlaylistTracks(self, playlist_id):
         response = self.sp.playlist(playlist_id)
 
@@ -143,7 +147,7 @@ class LatestGenrePlaylist:
             
         return track_ids
         
-    """ Add list of tracks to playlist"""
+    """ Add list of tracks to playlist """
     def AddTracksToPlaylist(self, genre, track_ids_list):
         # Get existing tracks from playlist
         playlist_id = self.genres[genre]
@@ -168,7 +172,7 @@ class LatestGenrePlaylist:
                         self.sp.playlist_add_items(playlist_id, new_list)
                         print("Added {} tracks to 'Latest songs playlist'".format(count, genre))            
 
-    """ Helper function to remove existing tracks in playlist"""
+    """ Helper function to remove existing tracks in playlist """
     def __RemoveTracksInPlaylist(self, genre, track_ids_list):
         playlist_id = self.genres[genre]
 
@@ -178,10 +182,6 @@ class LatestGenrePlaylist:
             self.sp.playlist_remove_all_occurrences_of_items(playlist_id, list)  
 
 def EventHandler(event, context):
-    if not event:
-        json_string = '{ "genres": ["rap", "pop"] }'
-    event = json.loads(json_string)
-
     lgp = LatestGenrePlaylist(event)
     lgp.AddNewReleases()
 
