@@ -94,7 +94,7 @@ class LatestGenrePlaylist:
         # Add tracks to playlist(s)
         for genre in self.genres:
             self.AddTracksToPlaylist(genre, track_ids)
-            #self.__RemoveTracksInPlaylist(genre, track_ids)
+            self.__RemoveTracksInPlaylist(genre, track_ids)
 
     """ Search for new released songs based on genre and return list of album ids """
     def SearchNewReleases(self):
@@ -106,7 +106,7 @@ class LatestGenrePlaylist:
             today = datetime.combine(datetime.today(), datetime.min.time())
             album_date = datetime.strptime(item['release_date'], '%Y-%m-%d')
 
-            if album_date >= today:
+            if album_date >= today - timedelta(1):
                 print("Found New Release #{} with {} track(s) released on {}: {} by {} ".format(
                     albums['offset'] + i, item['total_tracks'], album_date, item['name'], item['artists'][0]['name']))
                 album_id = item['id']
@@ -137,14 +137,25 @@ class LatestGenrePlaylist:
         return track_ids_list
 
     """ Get current playlist and return tracks """
-    def GetPlaylistTracks(self, playlist_id):
-        response = self.sp.playlist(playlist_id)
-
+    def GetPlaylistTracks(self, playlist_id):   
         track_ids = []
-        for track in response['tracks']['items']:
-            track_uri = track['track']['uri']
-            track_ids.append(track_uri)
+        offset = 0
+
+        response = self.sp.playlist_tracks(playlist_id)
+
+        while response:
+            next = response['next']
+
+            for track in response['items']:
+                track_uri = track['track']['uri']
+                track_ids.append(track_uri)
             
+            if next:
+                offset += 100
+                response = self.sp.playlist_tracks(playlist_id, offset=offset)
+            else:
+                response = None
+
         return track_ids
         
     """ Add list of tracks to playlist """
@@ -156,7 +167,7 @@ class LatestGenrePlaylist:
         for curr_list in track_ids_list:
             count = 0
             new_list = [id for id in curr_list if id not in prev_list]
-        
+
             # Get first track of album to identify artist's genre
             if new_list:
                 count += len(new_list)
@@ -183,7 +194,7 @@ class LatestGenrePlaylist:
 
 def EventHandler(event, context):
     if not event:
-        event = json.loads('{"genres": []}')
+        event = json.loads('{ "genres": ["rap", "hip-hop", "r-n-b", "pop"] }')
     lgp = LatestGenrePlaylist(event)
     lgp.AddNewReleases()
 
