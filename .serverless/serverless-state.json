@@ -9,6 +9,7 @@
       "runtime": "python3.8",
       "region": "us-west-2",
       "lambdaHashingVersion": "20201221",
+      "timeout": 30,
       "stage": "dev",
       "versionFunctions": true,
       "compiledCloudFormationTemplate": {
@@ -220,13 +221,13 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/latest-genre-playlist/dev/1634695480317-2021-10-20T02:04:40.317Z/latest-genre-playlist.zip"
+                "S3Key": "serverless/latest-genre-playlist/dev/1634962071245-2021-10-23T04:07:51.245Z/latest-genre-playlist.zip"
               },
               "Handler": "s_latest_genre_playlist.handler",
               "Runtime": "python3.8",
               "FunctionName": "latest-genre-playlist-dev-latest-genre-playlist",
               "MemorySize": 1024,
-              "Timeout": 6,
+              "Timeout": 30,
               "Environment": {
                 "Variables": {
                   "SPOTIPY_CLIENT_ID": "7c7187a4e6494b68839547ff06e23828",
@@ -248,20 +249,20 @@
               "LatestDashgenreDashplaylistLogGroup"
             ]
           },
-          "LatestDashgenreDashplaylistLambdaVersionWo3418cuvWbzJ1q3Eudu2fW3t48JEzcpUZrBbQjro": {
+          "LatestDashgenreDashplaylistLambdaVersionmvnKd8oFliuCSbfjhlusBY6dIUOY15MGf0LrHV8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "LatestDashgenreDashplaylistLambdaFunction"
               },
-              "CodeSha256": "YE046K23r6gQfX7Y0yxA3PO9z4hOSdkkIW8H27K46l8="
+              "CodeSha256": "sJ9L3WD6yUUmism5TmHtDy21suIwkZTxNOagBGtzb/E="
             }
           },
           "LatestDashgenreDashplaylistEventsRuleSchedule1": {
             "Type": "AWS::Events::Rule",
             "Properties": {
-              "ScheduleExpression": "cron(0/1 * * * ? *)",
+              "ScheduleExpression": "cron(0 */1 * * ? *)",
               "State": "ENABLED",
               "Targets": [
                 {
@@ -329,7 +330,7 @@
           "LatestDashgenreDashplaylistLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "LatestDashgenreDashplaylistLambdaVersionWo3418cuvWbzJ1q3Eudu2fW3t48JEzcpUZrBbQjro"
+              "Ref": "LatestDashgenreDashplaylistLambdaVersionmvnKd8oFliuCSbfjhlusBY6dIUOY15MGf0LrHV8"
             },
             "Export": {
               "Name": "sls-latest-genre-playlist-dev-LatestDashgenreDashplaylistLambdaFunctionQualifiedArn"
@@ -435,7 +436,7 @@
         "handler": "s_latest_genre_playlist.handler",
         "events": [
           {
-            "schedule": "cron(0/1 * * * ? *)"
+            "schedule": "cron(0 */1 * * ? *)"
           }
         ],
         "environment": {
@@ -449,10 +450,10 @@
         "name": "latest-genre-playlist-dev-latest-genre-playlist",
         "package": {},
         "memory": 1024,
-        "timeout": 6,
+        "timeout": 30,
         "runtime": "python3.8",
         "vpc": {},
-        "versionLogicalId": "LatestDashgenreDashplaylistLambdaVersionWo3418cuvWbzJ1q3Eudu2fW3t48JEzcpUZrBbQjro"
+        "versionLogicalId": "LatestDashgenreDashplaylistLambdaVersionmvnKd8oFliuCSbfjhlusBY6dIUOY15MGf0LrHV8"
       }
     },
     "configValidationMode": "warn",
@@ -488,7 +489,7 @@
           "serverless_sdk/**"
         ],
         "artifact": "/mnt/e/Repositories/Latest-Genre-Playlist/.serverless/latest-genre-playlist.zip",
-        "artifactDirectoryName": "serverless/latest-genre-playlist/dev/1634695480317-2021-10-20T02:04:40.317Z"
+        "artifactDirectoryName": "serverless/latest-genre-playlist/dev/1634962071245-2021-10-23T04:07:51.245Z"
       },
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
@@ -504,7 +505,7 @@
     "artifact": "/mnt/e/Repositories/Latest-Genre-Playlist/.serverless/latest-genre-playlist.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/latest-genre-playlist/dev/1634695480317-2021-10-20T02:04:40.317Z",
+    "artifactDirectoryName": "serverless/latest-genre-playlist/dev/1634962071245-2021-10-23T04:07:51.245Z",
     "artifact": "latest-genre-playlist.zip"
   }
 }

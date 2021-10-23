@@ -9,6 +9,7 @@ provider:
   runtime: python3.8
   region: us-west-2
   lambdaHashingVersion: 20201221
+  timeout: 30
 
 plugins:
   - serverless-python-requirements
@@ -32,7 +33,7 @@ functions:
   latest-genre-playlist:
     handler: latest-genre-playlist.EventHandler
     events:
-      - schedule: cron(0/1 * * * ? *)
+      - schedule: cron(0 */1 * * ? *)
     environment:
       SPOTIPY_CLIENT_ID: ${env:SPOTIPY_CLIENT_ID}
       SPOTIPY_CLIENT_SECRET: ${env:SPOTIPY_CLIENT_SECRET}

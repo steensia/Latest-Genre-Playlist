@@ -98,7 +98,7 @@ class LatestGenrePlaylist:
 
     """ Search for new released songs based on genre and return list of album ids """
     def SearchNewReleases(self):
-        response = self.sp.new_releases(country="US", limit=5, offset=0)
+        response = self.sp.new_releases(country="US", limit=50, offset=0)
         album_ids = []
 
         albums = response['albums']
@@ -182,6 +182,8 @@ class LatestGenrePlaylist:
             self.sp.playlist_remove_all_occurrences_of_items(playlist_id, list)  
 
 def EventHandler(event, context):
+    if not event:
+        event = json.loads('{"genres": []}')
     lgp = LatestGenrePlaylist(event)
     lgp.AddNewReleases()
 
