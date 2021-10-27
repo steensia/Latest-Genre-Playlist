@@ -1,14 +1,3 @@
-#!/usr/bin/python3
-"""
-Application Workflow
-Step 1: Create list of genres
-Step 2: Create playlists for each genre in the list
-Step 3: Search for new released song(s) based on list of genres (incorporate albums later)
-Step 4: Check if the song(s) were released today otherwise skip
-Step 4: Check genre of song(s) based on artists
-Step 4: Add new released song(s) to respective genre playlist
-Step 5: Repeat steps above in a crontab via AWS Lambda
-"""
 from typing import final
 import spotipy
 from spotipy import SpotifyOAuth
@@ -94,7 +83,6 @@ class LatestGenrePlaylist:
         # Add tracks to playlist(s)
         for genre in self.genres:
             self.AddTracksToPlaylist(genre, track_ids)
-            self.__RemoveTracksInPlaylist(genre, track_ids)
 
     """ Search for new released songs based on genre and return list of album ids """
     def SearchNewReleases(self):
@@ -164,8 +152,8 @@ class LatestGenrePlaylist:
         playlist_id = self.genres[genre]
         prev_list = self.GetPlaylistTracks(playlist_id)
 
+        count = 0
         for curr_list in track_ids_list:
-            count = 0
             new_list = [id for id in curr_list if id not in prev_list]
 
             # Get first track of album to identify artist's genre
@@ -177,11 +165,10 @@ class LatestGenrePlaylist:
                 trackGenres = self.GetTrackGenre(artist_id=track['artists'][0]['uri'])
                 if genre in trackGenres:
                     self.sp.playlist_add_items(playlist_id, new_list)
-                    print("Added {} tracks to 'Latest {} songs playlist'".format(count, genre))
                 else:
                     if genre == 'all':
                         self.sp.playlist_add_items(playlist_id, new_list)
-                        print("Added {} tracks to 'Latest songs playlist'".format(count, genre))            
+        print("No new songs added" if count == 0 else "{} new songs added".format(count))                
 
     """ Helper function to remove existing tracks in playlist """
     def __RemoveTracksInPlaylist(self, genre, track_ids_list):
