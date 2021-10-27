@@ -168,7 +168,7 @@ class LatestGenrePlaylist:
                 else:
                     if genre == 'all':
                         self.sp.playlist_add_items(playlist_id, new_list)
-        print("{} new tracks added to Latest songs playlist".format(count) if genre == 'all' 
+        print("{} new songs added to Latest songs playlist".format(count) if genre == 'all' 
                 else "{} new songs added to Latest {} songs playlist".format(count, genre))      
 
 def EventHandler(event, context):
