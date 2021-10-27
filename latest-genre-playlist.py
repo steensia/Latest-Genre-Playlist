@@ -168,20 +168,10 @@ class LatestGenrePlaylist:
                 else:
                     if genre == 'all':
                         self.sp.playlist_add_items(playlist_id, new_list)
-        print("No new songs added" if count == 0 else "{} new songs added".format(count))                
-
-    """ Helper function to remove existing tracks in playlist """
-    def __RemoveTracksInPlaylist(self, genre, track_ids_list):
-        playlist_id = self.genres[genre]
-
-        count = 0
-        for list in track_ids_list:
-            count += len(list)
-            self.sp.playlist_remove_all_occurrences_of_items(playlist_id, list)  
+        print("{} new tracks added to Latest songs playlist".format(count) if genre == 'all' 
+                else "{} new songs added to Latest {} songs playlist".format(count, genre))      
 
 def EventHandler(event, context):
-    if not event:
-        event = json.loads('{ "genres": ["rap", "hip-hop", "r-n-b", "pop"] }')
     lgp = LatestGenrePlaylist(event)
     lgp.AddNewReleases()
 
